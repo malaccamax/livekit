@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+DIST=${DIST:-testing}
+ARCH=${ARCH:-amd64}
+MIRROR=${MIRROR:-http://mirrors.ustc.edu.cn/debian}
+
+Check_stagefile .build/01-base
+
+mkdir -p chroot/01-base
+mount -t tmpfs -o size=8g,mode=0755 tmpfs chroot/01-base
+
+debootstrap --arch=${ARCH} --no-check-gpg \
+	${DIST} chroot/01-base ${MIRROR} 
+
+Create_stagefile .build/01-base
