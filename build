@@ -1,8 +1,10 @@
 #!/bin/bash
 . config
+. modules/build.sh
 
 for MODULE in $(ls modules | grep '^[[:digit:]]\+-');do
 	if [ -e modules/${MODULE}/build ];then
+		Echo_message "build module: ${MODULE}"
 		. modules/${MODULE}/build
 	fi
 done
