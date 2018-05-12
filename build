@@ -1,0 +1,8 @@
+#!/bin/bash
+. config
+
+for MODULE in $(ls modules | grep '^[[:digit:]]\+-');do
+	if [ -e modules/${MODULE}/build ];then
+		. modules/${MODULE}/build
+	fi
+done
