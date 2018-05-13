@@ -1,6 +1,6 @@
 #!/bin/bash
 . config
-. modules/build.sh
+. ${PROGRAM}/script/build.sh
 
 for MODULE in $(ls modules | grep '^[[:digit:]]\+-');do
 	if [ -e modules/${MODULE}/build ];then
