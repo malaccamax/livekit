@@ -1,10 +1,17 @@
 #!/bin/bash
+set -e
+
 . config
 . ${PROGRAM}/script/build.sh
 
-for MODULE in $(ls modules | grep '^[[:digit:]]\+-');do
-	if [ -e modules/${MODULE}/build ];then
+mkdir -p chroot
+if [ ! -z ${USETMPFS} ];then
+	mount -t tmpfs -o size=${USETMPFS},mode=0755 tmpfs chroot
+fi
+
+for MODULE in modules/??-*;do
+	if [ -e ${MODULE}/build ];then
 		Echo_message "build module: ${MODULE}"
-		. modules/${MODULE}/build
+		./${MODULE}/build
 	fi
 done

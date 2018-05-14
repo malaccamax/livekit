@@ -5,6 +5,9 @@
 # will contain everything including boot files and such.
 LIVEKITNAME="linux"
 
+# use tmpfs for build space. Use tmpfs will increase build time.
+USETMPFS="8g"
+
 # Kernel file, will be copied to your Live Kit
 # Your kernel must support aufs and squashfs. 
 VMLINUZ=/vmlinuz
