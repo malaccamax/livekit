@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -e
+
+. "${PROGRAM}/scripts/build.sh"
+
+STAGE=.build
+CHROOT=${CHROOT:-chroot/chroot}
+
+Require_stagefile ${STAGE}/bootstrap
+
+case "${1}" in
+    install)
+        Echo_message "Begin mounting miscfs..."
+        Check_stagefile ${STAGE}/chroot.miscfs
+        Check_lockfile .lock
+        Create_lockfile .lock
+
+        Echo_message " ... mounting /proc"
+        mkdir -p ${CHROOT}/proc
+        mount proc-live -t proc ${CHROOT}/proc
+
+        Echo_message " ... mounting /dev/pts"
+        mkdir -p ${CHROOT}/dev/pts
+        mount devpts-live -t devpts -o gid=5,mode=620 ${CHROOT}/dev/pts || true
+
+        Echo_message " ... mounting /sys"
+        mkdir -p ${CHROOT}/sys
+        mount sysfs-live -t sysfs ${CHROOT}/sys
+
+        Create_stagefile ${STAGE}/chroot.miscfs
+        ;;
+
+    remove)
+        Echo_message "Begin unmounting miscfs..."
+        Check_lockfile .lock
+        Create_lockfile .lock
+        Echo_message " ... unmounting /proc"
+        if [ -e ${CHROOT}/proc/sys/fs/binfmt_misc/status ];then
+            umount ${CHROOT}/proc/sys/fs/binfmt_misc
+        fi
+
+        if [ -e ${CHROOT}/proc/version ];then
+            umount ${CHROOT}/proc
+        fi
+
+        if grep -qs "$(pwd)/${CHROOT}/dev/pts" /proc/mounts || Find_files ${CHROOT}/dev/pts/*;then
+            Echo_message " ... unmounting /dev/pts"
+            umount ${CHROOT}/dev/pts
+        else
+            Echo_message " ... try to unmounting /dev/pts"
+            umount -f ${CHROOT}/dev/pts > /dev/null 2>&1 || true
+        fi
+
+        if [ -e ${CHROOT}/sys/class ];then
+            Echo_message " ... unmounting /sys"
+            umount ${CHROOT}/sys
+        fi
+
+        rm -f ${STAGE}/chroot.miscfs
+        ;;
+esac

@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -e
+
+. "${PROGRAM}/scripts/build.sh"
+
+Echo_message "Begin executing hooks..."
+
+Require_stagefile .build/config .build/bootstrap
+
+Check_stagefile .build/chroot.hooks
+
+Check_lockfile .lock
+Create_lockfile .lock
+
+for LOCATION in "config/hooks.chroot" "scripts/hooks";do
+    for FILE in "${LOCATION}"/????-*;do
+        if [ -e "${FILE}" ];then
+            install -Dm755 "${FILE}" chroot/root/hooks/$(basename ${FILE})
+        fi
+    done
+done
+
+if ls chroot/root/hooks/* > /dev/null 2>&1;then
+    for HOOK in chroot/root/hooks/*;do
+        Chroot chroot "/root/hooks/$(basename ${HOOK})" || { Echo_error "${HOOK} failed.You should check for errors."; exit 1; }
+        rm -f chroot/root/hooks/"$(basename ${HOOK})"
+    done
+
+    rmdir chroot/root/hooks
+fi
+
+Create_stagefile .build/chroot.hooks

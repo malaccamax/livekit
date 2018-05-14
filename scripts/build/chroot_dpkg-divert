@@ -1,0 +1,111 @@
+#!/bin/sh
+
+. "${PROGRAM}/scripts/build.sh"
+
+STAGE=".build"
+CHROOT=${CHROOT:-chroot}
+
+Require_stagefile ${STAGE}/bootstrap
+
+case "${1}" in
+    install)
+        Check_stagefile ${STAGE}/chroot.dpkg-divert
+        Check_lockfile .lock
+        Create_lockfile .lock
+
+        Echo_message "Configuring file /bin/hostname"
+        Chroot ${CHROOT} dpkg-divert --rename --quiet --add /bin/hostname
+cat > ${CHROOT}/bin/hostname << EOF
+#!/bin/sh
+
+echo "localhost.localdomain"
+EOF
+        chmod 755 ${CHROOT}/bin/hostname
+
+        if [ -e ${CHROOT}/usr/sbin/policy-rc.d ];then
+            Echo_message "Configuring file /usr/sbin/policy-rc.d"
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --add /usr/sbin/policy-rc.d
+
+            #Create policy-rc.d file
+cat > ${CHROOT}/usr/sbin/policy-rc.d << EOF
+#!/bin/sh
+echo "All runlevel operations denied by policy" >&2
+exit 101
+EOF
+            chmod 0755 ${CHROOT}/usr/sbin/policy-rc.d
+        fi
+
+        if [ -e /sbin/initctl ];then
+            Echo_message "Configuring upstart file /sbin/initctl"
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --add /sbin/initctl
+cat > ${CHROOT}/sbin/initctl << EOF
+#!/bin/sh
+
+exit 0
+EOF
+            chmod 0755 ${CHROOT}/sbin/initctl
+        fi
+
+	if [ -e /usr/sbin/invoke-rc.d ];then
+            Echo_message "Configuring upstart file /usr/sbin/invoke-rc.d"
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --add /usr/sbin/invoke-rc.d
+cat > ${CHROOT}/usr/sbin/invoke-rc.d << EOF
+#!/bin/sh
+
+exit 0
+EOF
+            chmod 0755 ${CHROOT}/usr/sbin/invoke-rc.d
+	fi
+
+        Echo_message "Configuring file /sbin/start-stop-daemon"
+        Chroot ${CHROOT} dpkg-divert --rename --quiet --add /sbin/start-stop-daemon
+cat > ${CHROOT}/sbin/start-stop-daemon << EOF
+#!/bin/sh
+
+exit 0
+EOF
+        chmod 755 ${CHROOT}/sbin/start-stop-daemon
+
+        # Disable dpkg syncing
+cat > ${CHROOT}/etc/dpkg/dpkg.cfg.d/isobuild << EOF
+force-unsafe-io
+EOF
+
+        Create_stagefile ${STAGE}/chroot.dpkg_divert
+        ;;
+
+    remove)
+        Check_lockfile .lock
+        Create_lockfile .lock
+        Echo_message "Deconfiguring file /bin/hostname"
+        rm -f ${CHROOT}/bin/hostname
+        Chroot ${CHROOT} dpkg-divert --rename --quiet --remove /bin/hostname
+
+        if [ -e ${CHROOT}/usr/sbin/policy-rc.d.distrib ];then
+            Echo_message "Deconfiguring file /usr/sbin/policy-rc.d"
+            rm -f ${CHROOT}/usr/bin/policy-rc.d
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --remove /usr/sbin/policy-rc.d
+        fi
+
+        if [ -e ${CHROOT}/sbin/initctl.distrib ];then
+            Echo_message "Deconfiguring file /sbin/initctl"
+            rm -f ${CHROOT}/sbin/initctl
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --remove /sbin/initctl
+        fi
+
+        if [ -e ${CHROOT}/usr/sbin/invoke-rc.d.distrib ];then
+            Echo_message "Deconfiguring file /usr/sbin/invoke-rc.d"
+            rm -f ${CHROOT}/usr/sbin/invoke-rc.d
+            Chroot ${CHROOT} dpkg-divert --rename --quiet --remove /usr/sbin/invoke-rc.d
+        fi
+
+        if [ -e ${CHROOT}/usr/sbin/start-stop-daemon.distrib ];then
+	    Echo_message "Deconfiguring file /sbin/start-stop-daemon"
+            rm -f ${CHROOT}/sbin/start-stop-daemon
+	    Chroot ${CHROOT} dpkg-divert --rename --quiet --remove /sbin/start-stop-daemon
+	    rm -f ${CHROOT}/etc/dpkg/dpkg.cfg.d/isobuild
+	fi
+
+        rm -f ${STAGE}/chroot.dpkg-divert
+        ;;
+esac

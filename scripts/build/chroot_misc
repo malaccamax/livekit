@@ -1,0 +1,66 @@
+#!/bin/sh
+
+. "${PROGRAM}/scripts/build.sh"
+
+STAGE=".build"
+CHROOT="${CHROOT:-chroot}"
+
+Require_stagefile ${STAGE}/bootstrap
+
+case "${1}" in
+    install)
+        Check_stagefile ${STAGE}/chroot.misc
+        Check_lockfile .lock
+        Create_lockfile .lock
+
+        Echo_message "Configuring file /etc/hostname"
+        echo "localhost.localdomain" > ${CHROOT}/etc/hostname
+
+        Echo_message "Configuring file /etc/hosts"
+cat > ${CHROOT}/etc/hosts << EOF
+127.0.0.1   localhost   localhost.localdomain
+127.0.1.1   deepin
+EOF
+        if [ -f /etc/hosts ];then
+            cat /etc/hosts >> ${CHROOT}/etc/hosts
+        fi
+
+        Echo_message "Configuring file /etc/resolv.conf"
+        if [ -e ${CHROOT}/etc/resolv.conf ];then
+            mv ${CHROOT}/etc/resolv.conf ${CHROOT}/etc/resolv.conf.orig
+            Truncate ${CHROOT}/etc/resolv.conf.orig
+        elif [ -L ${CHROOT}/etc/resolv.conf.orig ];then
+            mv ${CHROOT}/etc/resolv.conf ${CHROOT}/etc/resolv.conf.orig
+        fi
+
+        if [ -f /etc/resolv.conf ];then
+            cp -L /etc/resolv.conf ${CHROOT}/etc/resolv.conf
+        fi
+
+        Create_stagefile ${STAGE}/chroot.misc
+        ;;
+
+    remove)
+        Echo_message "Deconfiguring file /etc/hostname"
+        Check_lockfile .lock
+        Create_lockfile .lock
+        rm -f ${CHROOT}/etc/hostname
+
+        Echo_message "Deconfiguring file /etc/hosts"
+        Truncate ${CHROOT}/etc/hosts
+
+        Echo_message "Deconfiguring file /etc/resolv.conf"
+        if [ -e ${CHROOT}/etc/resolv.conf.orig ] || [ -L ${CHROOT}/etc/resolv.conf.orig ];then
+            mv ${CHROOT}/etc/resolv.conf.orig ${CHROOT}/etc/resolv.conf
+        else
+            Truncate ${CHROOT}/etc/resolv.conf
+        fi
+        # Clean up resolvconf's pollution
+        if [ -e ${CHROOT}/etc/resolvconf/resolv.conf.d ];then
+            rm -f ${CHROOT}/etc/resolvconf/resolv.conf.d/original
+            rm -f ${CHROOT}/etc/resolvconf/resolv.conf.d/tail
+        fi
+
+        rm -f ${STAGE}/chroot.misc
+        ;;
+esac

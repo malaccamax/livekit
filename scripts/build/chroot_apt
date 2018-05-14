@@ -1,0 +1,82 @@
+#!/bin/sh
+
+set -e
+
+[ -e "${PROGRAM}/scripts/build.sh" ] && . "${PROGRAM}/scripts/build.sh" 
+
+STAGE=.build
+CHROOT=${CHROOT:-chroot}
+
+Require_stagefile ${STAGE}/bootstrap
+
+case "${1}" in
+    install)
+        Echo_message "Configuring file /etc/apt/apt.conf"
+
+        Check_stagefile ${STAGE}/chroot.apt
+        mkdir -p ${CHROOT}/etc/apt/apt.conf.d
+
+        if [ -f config/apt/sources.list ];then
+            install -m644 config/apt/sources.list ${CHROOT}/etc/apt/sources.list
+        fi
+
+        if [ -f config/apt/preferences ];then
+            install -m644 config/apt/preferences ${CHROOT}/etc/apt/preferences
+        fi
+
+        if [ -f config/apt/apt.conf ];then
+            install -m644 config/apt/apt.conf ${CHROOT}/etc/apt/apt.conf
+        fi
+
+        echo "APT::Install-Recommends \"false\";" > ${CHROOT}/etc/apt/apt.conf.d/00recommends
+        echo "Aptitude::Recommends-Important \"false\";" >> ${CHROOT}/etc/apt/apt.conf.d/00recommends
+
+        echo "APT::Get::AllowUnauthenticated \"false\";" > ${CHROOT}/etc/apt/apt.conf.d/00secure
+        echo "Aptitude::CmdLine::Ignore-Trust-Violations \"false\";" >> ${CHROOT}/etc/apt/apt.conf.d/00secure
+
+        if Find_files config/apt/*.list;then
+            for _FILE in config/apt/*.list;do
+                if [ "$(basename ${_FILE})" != "sources.list" ];then
+                    cp -aL ${_FILE} ${CHROOT}/etc/apt/sources.list.d/
+                fi
+            done
+        fi
+
+        if Find_files config/apt/*.pref;then
+            for _FILE in config/apt/*.pref;do
+                cp -aL ${_FILE} ${CHROOT}/etc/apt/preferences.d/
+            done
+        fi
+
+        if Find_files config/apt/*.gpg;then
+            for _FILE in config/apt/*.gpg;do
+                cp -al ${_FILE} ${CHROOT}/etc/apt/trusted.gpg.d/
+            done
+        fi
+
+        if Find_files config/packages.${CHROOT}/*.deb;then
+            echo >> ${CHROOT}/etc/apt/preferences
+            echo "# Added by isobuild" >> ${CHROOT}/etc/apt/preferences
+            echo "Package: *" >> ${CHROOT}/etc/apt/preferences
+            echo "Pin: release o=config/packages.${CHROOT}" >> ${CHROOT}/etc/apt/preferences
+            echo "Pin-Priority: 1001" >> ${CHROOT}/etc/apt/preferences
+        fi
+
+        ;;
+
+    remove)
+        Echo_message "Deconfiguring file /etc/apt/apt.conf"
+
+        rm -f ${CHROOT}/etc/apt/apt.conf.d/00recommends
+        rm -f ${CHROOT}/etc/apt/apt.conf.d/00secure
+
+        if [ -f config/apt/preferences ];then
+            install -m644 config/apt/preferences ${CHROOT}/etc/apt/preferences
+        else
+            rm -f ${CHROOT}/etc/apt/preferences
+        fi
+
+        rm -f ${STAGE}/chroot.apt
+        ;;
+esac
+        
