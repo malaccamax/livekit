@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
+export PROGRAM=$(pwd)
 
 . config
-. ${PROGRAM}/script/build.sh
+. ${PROGRAM}/scripts/build.sh
 
 mkdir -p chroot
 if [ ! -z ${USETMPFS} ];then
-	mount -t tmpfs -o size=${USETMPFS},mode=0755 tmpfs chroot
+	if ! grep -q ${PROGRAM}/chroot /proc/mounts;then
+		Echo_message "mount tmpfs as build place."
+		mount -t tmpfs -o size=${USETMPFS},mode=0755 tmpfs chroot
+	fi
 fi
 
 for MODULE in modules/??-*;do

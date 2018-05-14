@@ -1,18 +1,17 @@
 #!/bin/bash
 set -e
+. ${PROGRAM}/config
+. ${PROGRAM}/scripts/build.sh
 
 Require_stagefile .build/bootstrap
 
 Check_stagefile .build/02-xorg
-
-Check_lockfile .lock
-Create_lockfile .lock
 
 mkdir -p chroot/02-xorg
 mount -t overlay overlay -o lowerdir=chroot/01-base,upperdir=chroot/02-xorg,workdir=chroot/work chroot/chroot
 
 CHROOT=chroot/chroot ./scripts/build/chroot_miscfs install
 Echo_message "Installing packages..."
-Chroot chroot/chroot apt-get install xserver-xorg xinit x11-utils libdrm-intel1 \
+Chroot chroot/chroot apt-get ${APT_OPTIONS} install xserver-xorg xinit x11-utils libdrm-intel1 \
 	libgl1-mesa-dri libglu1-mesa i3
 CHROOT=chroot/chroot ./scripts/build/chroot_miscfs remove

@@ -1,15 +1,13 @@
 #!/bin/bash
 set -e
-DIST=${DIST:-testing}
-ARCH=${ARCH:-amd64}
-MIRROR=${MIRROR:-http://mirrors.ustc.edu.cn/debian}
+. ${PROGRAM}/config
+. ${PROGRAM}/scripts/build.sh
 
+realpath=$(dirname `readlink -f $0`)
+${realpath}/bootstrap
+
+Require_stagefile .build/bootstrap
 Check_stagefile .build/01-base
-
-mkdir -p chroot/01-base
-debootstrap --arch=${ARCH} --no-check-gpg \
-	${DIST} chroot/01-base ${MIRROR} 
-
 CHROOT=chroot/01-base ./scripts/build/chroot_misc install
 CHROOT=chroot/01-base ./scripts/build/chroot_apt install
 CHROOT=chroot/01-base ./scripts/build/chroot_dpkg-divert install
@@ -17,12 +15,10 @@ CHROOT=chroot/01-base ./scripts/build/chroot_dpkg-divert install
 CHROOT=chroot/01-base ./scripts/build/chroot_miscfs install
 Echo_message "Installing packages..."
 Chroot chroot/01-base apt-get update
-Chroot chroot/01-base apt-get install openssh-server
+Chroot chroot/01-base apt-get ${APT_OPTIONS} install openssh-server linux-image-amd64
 CHROOT=chroot/01-base ./scripts/build/chroot_miscfs remove
 
-Create_stagefile .build/01-base
-
-Check_stagefile .build/bootstrap
 mkdir -p chroot/chroot
 mkdir -p chroot/work
-Create_stagefile .build/bootstrap
+
+Create_stagefile .build/01-base
