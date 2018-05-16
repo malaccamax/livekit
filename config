@@ -3,7 +3,7 @@
 # Live Kit Name. Defaults to 'linux';
 # This will be the name of the directory created on your CD/USB, which
 # will contain everything including boot files and such.
-LIVEKITNAME="linux"
+LIVEKITNAME="slax"
 
 # Use tmpfs for build space. Use tmpfs will increase build time.
 USETMPFS="8g"
@@ -34,7 +34,7 @@ NETWORK=true
 LIVEKITDATA=/tmp/$LIVEKITNAME-data-$$
 
 # Bundle extension, for example 'bundle' for .bundle extension
-BEXT=bundle
+BEXT=sb
 
 # Directory with kernel .ko modules
 LMK="lib/modules/$KERNEL"

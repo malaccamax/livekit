@@ -1,6 +1,7 @@
 #!/bin/bash
 # Create initramfs image
 #
+set -e
 
 INITRAMFS=/root/initramfs.tmp
 KERNEL=$(ls -r1 --sort=version /lib/modules | head -n1)

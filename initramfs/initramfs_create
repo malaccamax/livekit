@@ -1,6 +1,8 @@
 #!/bin/bash
 # Create initramfs image
 #
+set -e
+
 CHROOT=${CHROOT:-chroot/chroot}
 INITRAMFS=${CHROOT}/root/initramfs.tmp
 
@@ -10,7 +12,7 @@ Chroot ()
 	COMMANDS="${@}"
 
 	#TODO: we just use network environment
-	ENV="$(grep -v '^network' config)"
+	ENV="$(grep 'NETWORK' config)"
 
 	chroot "${CHROOT}" /usr/bin/env -i HOME="/root" PATH="/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" ${ENV} ${COMMANDS}
 
