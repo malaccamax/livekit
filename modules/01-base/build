@@ -16,6 +16,11 @@ CHROOT=chroot/01-base ./scripts/build/chroot_miscfs install
 Echo_message "Installing packages..."
 Chroot chroot/01-base apt-get update
 Chroot chroot/01-base apt-get ${APT_OPTIONS} install openssh-server linux-image-amd64
+
+cd ${realpath}/rootcopy
+find . | cpio -dmpu --no-preserve-owner ${OLDPWD}/chroot/01-base
+cd "${OLDPWD}"
+
 CHROOT=chroot/01-base ./scripts/build/chroot_miscfs remove
 
 mkdir -p chroot/chroot

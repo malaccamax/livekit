@@ -5,10 +5,10 @@ set -e
 
 Require_stagefile .build/bootstrap
 
-Check_stagefile .build/02-xorg
+Check_stagefile .build/02-driver
 
-mkdir -p chroot/02-xorg
-mount -t overlay overlay -o lowerdir=chroot/01-base,upperdir=chroot/02-xorg,workdir=chroot/work chroot/chroot
+mkdir -p chroot/02-driver
+mount -t overlay overlay -o lowerdir=chroot/01-base,upperdir=chroot/02-driver,workdir=chroot/work chroot/chroot
 
 CHROOT=chroot/chroot ./scripts/build/chroot_miscfs install
 Echo_message "Installing packages..."
