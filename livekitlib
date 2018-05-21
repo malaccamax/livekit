@@ -713,7 +713,6 @@ filter_load()
    fi
 }
 
-
 # noload filter
 #
 filter_noload()
@@ -725,6 +724,26 @@ filter_noload()
    else
       cat - | egrep -v "$FILTER"
    fi
+}
+
+# auto detect graphics
+filter_autographic()
+{
+	if grep -vq autographic /proc/cmdline; then
+		cat -
+	else
+		if lspci -n | egrep '0300:\s1002'; then
+			echo "* ATI graphics card detect"
+			cat - | egrep -v "nvidia"
+
+		elif lspci -n | egrep '0300:\s10de'; then
+			echo "* NVIDIA graphics card detect"
+			cat - | egrep -v "amdgpu"
+		else
+			echo "* None ATI or NVIDIA graphics card detect"
+			cat - | egrep -v "nvidia|amdgpu"
+	   fi
+	fi
 }
 
 # sort modules by number even if they are in subdirectory
@@ -749,7 +768,7 @@ union_append_bundles()
 
    echo_green_star
    echo "Adding bundles to union"
-   ( ls -1 "$1" | sort -n ; cd "$1" ; find modules/ 2>/dev/null | sortmod | filter_load) | grep '[.]'$BEXT'$' | filter_noload | while read BUNDLE; do
+   ( ls -1 "$1" | sort -n ; cd "$1" ; find modules/ 2>/dev/null | sortmod | filter_load) | grep '[.]'$BEXT'$' | filter_noload | filter_autographic | while read BUNDLE; do
       echo "* $BUNDLE"
       BUN="$(basename "$BUNDLE")"
       mkdir -p "$2/$BUN"
