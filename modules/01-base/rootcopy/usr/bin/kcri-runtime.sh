@@ -69,6 +69,34 @@ print_branches()
    cd "$CWD"
 }
 
+runscriptlet()
+{
+	local SB HANDLER TEMPSCRIPT
+	local SB=$1
+	local HANDLER=$2
+	if [ -f ${SB}/run/install ];then 
+		debug "/run/install not exists."
+	fi
+	if ! grep -q ${HANDLER} ${SB}/run/install;then
+		debug "/run/install has not ${HANDLER}."
+	fi
+
+	TEMPSCRIPT=$(mktemp /tmp/kcri.XXXXXXXXX)
+cat > ${TEMPSCRIPT} <<EOF
+. ${SB}/run/desc || :
+. ${SB}/run/install
+${HANDLER}
+EOF
+	#We use bash as default
+	bash ${TEMPSCRIPT}
+	RESULT=$?
+	rm -f ${TEMPSCRIPT}
+	if [ ${RESULT} != 0 ];then
+		error "can't runscriptlet $1 $2"
+	fi
+
+}
+
 ## CRI interfaces
 
 readonly kContainerStateCreated="created"
@@ -148,6 +176,8 @@ containerCreate() {
     TGT="$LIVE/bundles/$BAS"
     mkdir -p "$TGT"
 
+	runscriptlet "${TGT}" pre_install
+
     mount -n -o loop,ro "$SB" "$TGT"
     if [ $? -ne 0 ]; then
         error "Error mounting $SB to $TGT, perhaps corrupted download"
@@ -160,6 +190,8 @@ containerCreate() {
         rmdir "$TGT"
         error "Error attaching bundle filesystem to Slax"
     fi
+
+	runscriptlet "${TGT}" post_install
     echo "Slax Bundle activated: $BAS"
 }
 
@@ -249,11 +281,15 @@ containerRemove() {
 		error "can't find active bundle $1"
 	fi
 
+	runscriptlet "${SB}" pre_remove
+
 	echo "Attempting to deactivate bundle $SB..."
 	mount -t aufs -o remount,verbose,del:"$BUNDLES/$SB" aufs / 2>/dev/null
 	if [ $? -ne 0 ]; then
 		error "Unable to deactivate Bundle - still in use. See dmesg for more."
 	fi
+
+	runscriptlet "${SB}" post_remove
 
    # remember what loop device was the bundle mounted to, it may be needed later
    LOOP="$(cat /proc/mounts | fgrep " $BUNDLES/$SB " | cut -d " " -f 1)"
